@@ -134,7 +134,7 @@ fm.ksat <- as.formula(paste("log_ksat~ ",paste(names(All_cov), collapse = "+")))
 fm.ksat
 
 ```
-# Fitting of models
+# Model fitting
 ```{r}
 set.seed(2) 
 rm.ksat <- Train1[complete.cases(Train1[,all.vars(fm.ksat)]),]
