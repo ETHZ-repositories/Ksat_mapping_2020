@@ -6,7 +6,7 @@ Surya Gupta, Tom Hengl, Peter Lehmann, Sara Bonetti, Dani Or
   - [Selection of Grids randomly for spatial
     cross-validation](#selection-of-grids-randomly-for-spatial-cross-validation)
   - [Selection of Covaraites](#selection-of-covaraites)
-  - [Fitting of models](#fitting-of-models)
+  - [Model fitting](#model-fitting)
 
 Soil saturated hydraulic conductivity (Ksat) is one of the prominent
 soil hydraulic properties used in the modeling of land surface
@@ -303,7 +303,7 @@ fm.ksat
     ##     lcv_snow_probav.lc100_p_250m_s0..0cm_2017_v1.0 + lcv_wetlands.regularly.flooded_upmc.wtd_p_250m_b0..200cm_2010..2015_v1.0 + 
     ##     olm_bd + olm_clay + olm_sand + veg_fapar_proba.v.annual_d_250m_s0..0cm_2014..2017_v1.0
 
-# Fitting of models
+# Model fitting
 
 ``` r
 set.seed(2) 
