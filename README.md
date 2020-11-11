@@ -3,8 +3,8 @@ forest in a Covariate-based Geo Transfer Functions (CoGTF) framework
 ================
 Surya Gupta, Tom Hengl, Peter Lehmann, Sara Bonetti, Dani Or
 
-  - [Selection of Grids randomly for spatial
-    cross-validation](#selection-of-grids-randomly-for-spatial-cross-validation)
+  - [Selection of random grids for spatial
+    cross-validation](#selection-of-random-grids-for-spatial-cross-validation)
   - [Selection of Covaraites](#selection-of-covaraites)
   - [Model fitting](#model-fitting)
 
@@ -215,7 +215,7 @@ unique(PTF_temp2$ID)
     ## [277] 36435 34994 17233 9328  37497 11487 10039 12090 9841  37612 13653 21882
     ## 18653 Levels: 10015 10016 10017 10018 10019 10020 10022 10023 10024 ... 9926
 
-# Selection of Grids randomly for spatial cross-validation
+# Selection of random grids for spatial cross-validation
 
 ``` r
 ## We have a total of 289 grids that contain data. We have divided the samples into 57 grids for each set. 
