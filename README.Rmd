@@ -7,6 +7,18 @@ output:
     toc: true
 ---
 
+Soil saturated hydraulic conductivity (Ksat) is one of the prominent soil hydraulic properties used in the modeling of land surface processes. Ksat is often derived using limited dataset and soil basic properties likely soil texture, bulk density) by means pedotransfer functions (PTFs). We propose here an integrated Predictive Soil Modeling (PSM) framework where soil variables are combined with RS-based covariates using the Random Forest method. We refer to this approach as the “Covariate-based Geo Transfer Functions” (CoGTF). Here, the objective of this report to show the methods used to develop the CoGTF with R code and stepwise description.   
+
+
+SoilKsatDB [link](https://doi.org/10.5281/zenodo.3752721)
+
+CoGTF global Ksat maps [link](https://doi.org/10.5281/zenodo.3934853)
+
+To cite this maps please use:
+
+Gupta, S., Hengl, T., Lehmann, P., Bonetti, S., Papritz, A. and Or, D.: [Global prediction of soil saturated hydraulic conductivity using random forest in a Covariate-based Geo Transfer Functions (CoGTF) framework](https://www.essoar.org/doi/10.1002/essoar.10503663.1). manuscript submitted to Journal of Advances in Modeling Earth Systems (JAMES).
+
+
 ```{r}
 library(caret)
 library(randomForest)
@@ -22,11 +34,16 @@ library(RColorBrewer)
 library(viridis)
 library(Metrics)
 
-tt2<-read.csv("E:/Ksat_dataset_mapping.csv")
+ksat_df<-read.csv("E:/Ksat_dataset_mapping.csv")
 
-## Unique IDs for 5 degrees by 5 degrees
+## Unique IDs for 1 degrees by 1 degrees
 
-unique(tt2$FID_Fish_n)
+## Spatial ID:
+pol.100km = readOGR("E:/Ksat/tiles_ll_100km_mask.shp")
+sp.pnts = ksat_df[,c("longitude_decimal_degrees", "latitude_decimal_degrees")]
+ov.ID = sp::over(SpatialPoints(sp.pnts, proj4string = CRS(proj4string(pol.100km))), pol.100km["ID"])
+summary(is.na(ov.ID$ID))
+ksat_df$ID = ov.ID$ID
 
 
 source("E:/OpenLandMap/R/saveRDS_functions.R")
@@ -36,110 +53,55 @@ source("E:/OpenLandMap/R/LandGIS_functions.R")
 
 ## 3D modeling (see Hengl, T., & MacMillan, R. A. (2019). Predictive soil mapping with R. Lulu. com.)
 
-dfs <- hor2xyd(tt2, U="hzn_top", L="hzn_bot")
+dfs <- hor2xyd(ksat_df, U="hzn_top", L="hzn_bot")
 
 
-I.vars = make.names(unique(unlist(sapply(c("s.no","clm_", "dtm_", "lcv", "veg_", "olm_c", "olm_s", "olm_bd", "FID_Fish_", "DEPTH"), function(i){names(dfs)[grep(i, names(dfs))]}))))
+I.vars = make.names(unique(unlist(sapply(c("s.no","clm_", "dtm_", "lcv", "veg_", "olm_c", "olm_s", "olm_bd", "ID", "DEPTH"), function(i){names(dfs)[grep(i, names(dfs))]}))))
 
 t.vars = c("log_ksat")
 sel.n <- c(t.vars,I.vars)
 sel.r <- complete.cases(dfs[,sel.n])
 PTF_temp2 <- dfs[sel.r,sel.n]
 
+unique(PTF_temp2$ID)
+
+```
+
+# Selection of Grids randomly for spatial cross-validation
+
+```{r}
+
+## We have a total of 289 grids that contain data. We have divided the samples into 57 grids for each set. 
 ##Set1
-set.seed(16)
-chosen <- sample(unique(PTF_temp2$FID_Fish_n), 30)
+set.seed(17)
+chosen <- sample(unique(PTF_temp2$ID), 57)
 
-ff<-subset(PTF_temp2, FID_Fish_n %in% chosen)
+ff<-subset(PTF_temp2, ID %in% chosen)
 
-final<-PTF_temp2[!(PTF_temp2$FID_Fish_n %in% ff$FID_Fish_n),]
+final<-PTF_temp2[!(PTF_temp2$ID %in% ff$ID),]
 
-set.seed(6)
-chosen <- sample(unique(final$FID_Fish_n), 30)
+set.seed(18)
+chosen <- sample(unique(final$ID), 57)
 
-ff1<-subset(final, FID_Fish_n %in% chosen)
+ff1<-subset(final, ID %in% chosen)
 
-final1<-final[!(final$FID_Fish_n %in% ff1$FID_Fish_n),]
-
-
-set.seed(11)
-chosen <- sample(unique(final1$FID_Fish_n), 30)
-
-ff2<-subset(final1, FID_Fish_n %in% chosen)
-
-final2<-final1[!(final1$FID_Fish_n %in% ff2$FID_Fish_n),]
+final1<-final[!(final$ID %in% ff1$ID),]
 
 
-set.seed(14)
-chosen <- sample(unique(final2$FID_Fish_n), 30)
+set.seed(19)
+chosen <- sample(unique(final1$ID), 57)
 
-ff3<-subset(final2, FID_Fish_n %in% chosen)
+ff2<-subset(final1, ID %in% chosen)
 
-final3<-final2[!(final2$FID_Fish_n %in% ff3$FID_Fish_n),]
-
-##Set2
-
-set.seed(33)
-chosen <- sample(unique(PTF_temp2$FID_Fish_n), 30)
-
-ff<-subset(PTF_temp2, FID_Fish_n %in% chosen)
-
-final<-PTF_temp2[!(PTF_temp2$FID_Fish_n %in% ff$FID_Fish_n),]
-
-set.seed(39)
-chosen <- sample(unique(final$FID_Fish_n), 30)
-
-ff1<-subset(final, FID_Fish_n %in% chosen)
-
-final1<-final[!(final$FID_Fish_n %in% ff1$FID_Fish_n),]
+final2<-final1[!(final1$ID %in% ff2$ID),]
 
 
-set.seed(57)
-chosen <- sample(unique(final1$FID_Fish_n), 30)
+set.seed(20)
+chosen <- sample(unique(final2$ID), 57)
 
-ff2<-subset(final1, FID_Fish_n %in% chosen)
+ff3<-subset(final2, ID %in% chosen)
 
-final2<-final1[!(final1$FID_Fish_n %in% ff2$FID_Fish_n),]
-
-
-set.seed(67)
-chosen <- sample(unique(final2$FID_Fish_n), 30)
-
-ff3<-subset(final2, FID_Fish_n %in% chosen)
-
-final3<-final2[!(final2$FID_Fish_n %in% ff3$FID_Fish_n),]
-
-##Set3
-
-set.seed(77)
-chosen <- sample(unique(PTF_temp2$FID_Fish_n), 30)
-
-ff<-subset(PTF_temp2, FID_Fish_n %in% chosen)
-
-final<-PTF_temp2[!(PTF_temp2$FID_Fish_n %in% ff$FID_Fish_n),]
-
-set.seed(85)
-chosen <- sample(unique(final$FID_Fish_n), 30)
-
-ff1<-subset(final, FID_Fish_n %in% chosen)
-
-final1<-final[!(final$FID_Fish_n %in% ff1$FID_Fish_n),]
-
-
-set.seed(96)
-chosen <- sample(unique(final1$FID_Fish_n), 30)
-
-ff2<-subset(final1, FID_Fish_n %in% chosen)
-
-final2<-final1[!(final1$FID_Fish_n %in% ff2$FID_Fish_n),]
-
-
-set.seed(115)
-chosen <- sample(unique(final2$FID_Fish_n), 30)
-
-ff3<-subset(final2, FID_Fish_n %in% chosen)
-
-final3<-final2[!(final2$FID_Fish_n %in% ff3$FID_Fish_n),]
+final3<-final2[!(final2$ID %in% ff3$ID),]
 
 
 
@@ -160,7 +122,10 @@ Train4<- rbind(ff3,final3, ff,ff1)
 
 Train5<- rbind(final3, ff,ff1, ff2)
 
+```
+# Selection of Covaraites
 
+```{r}
 grid <- list.files("E:/maps_tests/new_layers/layers_RS/" , pattern = "*.tif$")
 All_cov <- raster::stack(paste0("E:/maps_tests/new_layers/layers_RS/", grid))
 
@@ -168,12 +133,17 @@ set.seed(2)
 fm.ksat <- as.formula(paste("log_ksat~ ",paste(names(All_cov), collapse = "+")))
 fm.ksat
 
+```
+# Fitting of models
+```{r}
 set.seed(2) 
 rm.ksat <- Train1[complete.cases(Train1[,all.vars(fm.ksat)]),]
 m.ksat <- ranger(fm.ksat, rm.ksat, num.trees=200, mtry=6, quantreg = TRUE)
 m.ksat
 
 df5$prediction<- predict(m.ksat,df5)$predictions
+
+RMSE(df5$prediction, df5$log_ksat)
 
 ## Ist_part is computed
 
@@ -183,12 +153,16 @@ m.ksat1
 
 df1$prediction<- predict(m.ksat1,df1)$predictions
 
+RMSE(df1$prediction, df1$log_ksat)
+
 ## 2nd_part is computed
 rm.ksat2 <- Train3[complete.cases(Train3[,all.vars(fm.ksat)]),]
 m.ksat2 <- ranger(fm.ksat, rm.ksat2, num.trees=200, mtry=6, quantreg = TRUE)
 m.ksat2
 
 df2$prediction<- predict(m.ksat2,df2)$predictions
+
+RMSE(df2$prediction, df2$log_ksat)
 
 ## 3rd_part is computed
 
@@ -197,6 +171,8 @@ m.ksat3 <- ranger(fm.ksat, rm.ksat3, num.trees=200, mtry=6, quantreg = TRUE)
 m.ksat3
 df3$prediction<- predict(m.ksat3,df3)$predictions
 
+RMSE(df3$prediction, df3$log_ksat)
+
 ## 4th_part is computed
 rm.ksat4 <- Train5[complete.cases(Train5[,all.vars(fm.ksat)]),]
 m.ksat4 <- ranger(fm.ksat, rm.ksat4, num.trees=200, mtry=6, quantreg = TRUE)
@@ -204,28 +180,27 @@ m.ksat4
 
 df4$prediction<- predict(m.ksat4,df4)$predictions
 
+RMSE(df4$prediction, df4$log_ksat)
+
 Final_data<- rbind(df1,df2,df3,df4,df5)
 
-dd<- aggregate(Final_data[, 1:33], list(Final_data$s_no), mean)
+#dd<- aggregate(Final_data[, 1:34], list(Final_data$s.no), mean)
 
 
 
-ll<- lm(dd$prediction~ dd$log_ksat)
+ll<- lm(Final_data$prediction~ Final_data$log_ksat)
 
-RMSE(dd$prediction,dd$log_ksat)
+RMSE(Final_data$prediction,Final_data$log_ksat)
 
 summary(ll)
 
 
-ccc = DescTools::CCC(dd$prediction,dd$log_ksat, ci = "z-transform", conf.level = 0.95, na.rm=TRUE)$rho.c
+ccc = DescTools::CCC(Final_data$prediction,Final_data$log_ksat, ci = "z-transform", conf.level = 0.95, na.rm=TRUE)$rho.c
 ccc
 
-bias(dd$prediction,dd$log_ksat)
 
-colnames(dd)
-
-dd$log_ksat1<- 10^dd$log_ksat
-dd$prediction1<- 10^dd$prediction
+Final_data$log_ksat1<- 10^Final_data$log_ksat
+Final_data$prediction1<- 10^Final_data$prediction
 
 hexbinplot(log_ksat1~ prediction1, 
            panel = function(x, y, ...){
@@ -233,7 +208,7 @@ hexbinplot(log_ksat1~ prediction1,
              panel.loess(x, y,span = 2/3, col.line = "blue",type="l", lty=2, lwd = 4)
              panel.abline(c(0, 1),lwd = 2)
            },
-           data = dd,xlab = "Predicted Ksat [cm/day]", ylab = "Measured Ksat [cm/day]",cex.axis = 4, aspect="1", xbins=30, colramp = function(n) {viridis (8,  alpha = 1, begin = 0, end = 1, direction = -1,option = "C")},xlim=c(0.1,10000), ylim=c(0.1,10000),
+           data = Final_data,xlab = "Predicted Ksat [cm/day]", ylab = "Measured Ksat [cm/day]",cex.axis = 4, aspect="1", xbins=30, colramp = function(n) {viridis (8,  alpha = 1, begin = 0, end = 1, direction = -1,option = "C")},xlim=c(0.1,10000), ylim=c(0.1,10000),
            scales=list(
              x = list(log = 10, equispaced.log = FALSE), 
              y = list(log = 10, equispaced.log = FALSE)
@@ -243,15 +218,15 @@ hexbinplot(log_ksat1~ prediction1,
 
 ##Fitting final model
 
-rm.ksat <- PTF_temp2[complete.cases(PTF_temp2[,all.vars(fm.ksat)]),]
-m.ksat <- ranger(fm.ksat, rm.ksat, num.trees=200, mtry=6, quantreg = TRUE)
-m.ksat
+#rm.ksat <- PTF_temp2[complete.cases(PTF_temp2[,all.vars(fm.ksat)]),]
+#m.ksat <- ranger(fm.ksat, rm.ksat, num.trees=200, mtry=6, quantreg = TRUE)
+#m.ksat
 
 
 ##Importance variable
-m.ksat <- randomForest(fm.ksat, rm.ksat, num.trees=200, mtry=6, quantreg = TRUE)
+#m.ksat <- randomForest(fm.ksat, rm.ksat, num.trees=200, mtry=6, quantreg = TRUE)
 
-varImpPlot(m.ksat, sort=TRUE, n.var=min(30, nrow(m.ksat$importance)))
+#varImpPlot(m.ksat, sort=TRUE, n.var=min(30, nrow(m.ksat$importance)))
 
 ## Then Produced the final CoGTF map
 
