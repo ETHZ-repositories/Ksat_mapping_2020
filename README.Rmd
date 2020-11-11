@@ -67,7 +67,7 @@ unique(PTF_temp2$ID)
 
 ```
 
-# Selection of Grids randomly for spatial cross-validation
+# Selection of random grids for spatial cross-validation
 
 ```{r}
 
